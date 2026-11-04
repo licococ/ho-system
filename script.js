@@ -307,9 +307,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderClinicsByDept(estimatedDept);
 
         } catch (err) {
-            loadingMsg.remove();
+            if (loadingMsg) loadingMsg.remove();
             console.error('Gemini API Error details:', err);
-            appendMessage('ai', '⚠️ API 連線或金鑰驗證發生錯誤（可能為金鑰無效或網路阻擋）。以下為系統自動切換的備用醫療建議：\n\n' + getFallbackAnalysis(text));
+            appendMessage('ai', '⚠️ API 發生錯誤，詳細原因：' + err.message + '\n\n以下為系統自動切換的備用醫療建議：\n\n' + getFallbackAnalysis(text));
         }
     }
 
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullPrompt = `病患基本資料：${age}歲、${gender}、體溫${temp}°C、不適嚴重度 ${severity}/10。
 病患主訴：${userPrompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${userApiKey}`;
+       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
