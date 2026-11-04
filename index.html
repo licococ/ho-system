@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧健康與就醫輔助系統 - AI醫療輔助系統</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js 圖表庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 頂部導覽列 -->
+        <header class="app-header">
+            <div class="logo-area">
+                <h1>智慧健康與就醫輔助系統</h1>
+                <span class="sub-logo">AI 醫療輔助系統（第七組專題）</span>
+            </div>
+            
+            <!-- API Key 設定區域 -->
+            <div class="api-key-config">
+                <input type="password" id="api-key-input" placeholder="貼上 Gemini API Key (選填)">
+                <button id="save-key-btn" class="secondary-btn">儲存 Key</button>
+            </div>
+
+            <!-- 分頁導覽 -->
+            <nav class="nav-tabs">
+                <button class="tab-btn active" data-target="symptom-tab">症狀對話與分析</button>
+                <button class="tab-btn" data-target="dashboard-tab">健康趨勢儀表板</button>
+                <button class="tab-btn" data-target="history-clinic-tab">紀錄與附近診所</button>
+                <button class="tab-btn alert-tab-btn" data-target="emergency-tab">▲ 緊急警示測試</button>
+            </nav>
+        </header>
+
+        <!-- 主要內容區 (滿版固定) -->
+        <main class="app-content">
+            <!-- 1. 症狀對話與分析 -->
+            <section id="symptom-tab" class="tab-content active">
+                <div class="split-view">
+                    <!-- 左側：基本資訊與快捷選擇 -->
+                    <div class="side-panel card">
+                        <!-- 第一區塊：個人基本資訊與自訂時間體溫紀錄 -->
+                        <div class="panel-section">
+                            <h3>基本健康資訊與體溫紀錄</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="age">年齡</label>
+                                    <input type="number" id="age" value="28">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender">性別</label>
+                                    <select id="gender">
+                                        <option value="男" selected>男</option>
+                                        <option value="女">女</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="record-time">記錄時間</label>
+                                    <input type="datetime-local" id="record-time">
+                                </div>
+                                <div class="form-group">
+                                    <label for="temp">量測體溫 (°C)</label>
+                                    <input type="number" step="0.1" id="temp" value="38.2">
+                                </div>
+                                <div class="form-group span-2">
+                                    <label for="severity">症狀程度 (1-10)：<span id="severity-val">6 分</span></label>
+                                    <input type="range" id="severity" min="1" max="10" value="6">
+                                </div>
+                            </div>
+                            <button id="add-record-btn" class="secondary-btn-full mb-10">➕ 記錄自訂時間與體溫</button>
+                        </div>
+
+                        <hr class="section-divider">
+
+                        <!-- 第二區塊：常用衛教快捷卡片 -->
+                        <div class="panel-section">
+                            <h3>常用衛教快捷卡片</h3>
+                            <div class="form-group">
+                                <label>選擇主題快捷按鈕：</label>
+                                <div class="quick-tags">
+                                    <button type="button" class="tag-btn" data-symptom="發燒流鼻水">🌡️ 發燒流鼻水</button>
+                                    <button type="button" class="tag-btn" data-symptom="胃痛胃酸逆流">💊 胃痛胃酸逆流</button>
+                                    <button type="button" class="tag-btn" data-symptom="關節扭傷腫脹">🩹 關節扭傷腫脹</button>
+                                    <button type="button" class="tag-btn danger" data-symptom="胸痛呼吸困難">💔 ⚠️ 胸痛呼吸困難</button>
+                                </div>
+                            </div>
+                            <button id="generate-preset-btn" class="primary-btn mb-10">生成標準衛教指引</button>
+                        </div>
+
+                        <!-- 預設隱藏的標準衛教建議結果區 -->
+                        <div id="standard-education-card" class="preset-card hidden">
+                            <h4>📋 標準就醫與衛教指引</h4>
+                            <div class="preset-item">
+                                <strong>建議就診科別：</strong> <span id="preset-dept">一般內科 / 耳鼻喉科</span>
+                            </div>
+                            <div class="preset-item">
+                                <strong>建議醫療層級：</strong> <span id="preset-level">建議先至【基層診所】初步診斷</span>
+                            </div>
+                            <div class="preset-box">
+                                <h5>📝 看診前準備 CheckList：</h5>
+                                <ul id="preset-checklist">
+                                    <li>✓ 攜帶健保卡與身份證件</li>
+                                    <li>✓ 紀錄體溫變化與發燒時間</li>
+                                    <li>✓ 整理目前服用的常備藥物清單</li>
+                                </ul>
+                            </div>
+                            <div class="preset-box">
+                                <h5>💬 看診溝通小抄：</h5>
+                                <p id="preset-script">「醫師您好，我近期感到身體不適，想請醫師協助評估。」</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右側：獨立 Gemini API AI 醫療分診對話視窗 -->
+                    <div class="chat-panel card">
+                        <div class="chat-header">
+                            <h3>AI 醫療分診助手對話視窗 (API 連線)</h3>
+                            <button id="clear-chat-btn" class="text-btn">清除對話</button>
+                        </div>
+                        
+                        <!-- 訊息滾動區 -->
+                        <div id="chat-messages" class="chat-messages">
+                            <div class="message system-msg">
+                                👨‍⚕️ 您好！我是 AI 醫療健康助手。請在下方輸入框詳細描述您的身體不適症狀，我將透過雲端 AI 為您提供個性化的分診評估與看診指引。
+                            </div>
+                        </div>
+
+                        <!-- 對話輸入區 -->
+                        <div class="chat-input-area">
+                            <textarea id="chat-input" placeholder="請詳細描述您的不適症狀（例如：從前天晚上開始出現喉嚨劇痛、乾咳、流鼻水，體溫約 37.8 度...）" rows="2"></textarea>
+                            <button id="send-btn" class="chat-send-btn">發送</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 健康趨勢儀表板 -->
+            <section id="dashboard-tab" class="tab-content">
+                <div class="scrollable-content">
+                    <h2>每日症狀與健康指標追蹤儀表板</h2>
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <span>近 7 天平均體溫</span>
+                            <h3 id="avg-temp">尚無紀錄</h3>
+                            <span class="trend-down" id="avg-temp-trend">請先於左側新增健康紀錄</span>
+                        </div>
+                        <div class="stat-card">
+                            <span>平均症狀嚴重度</span>
+                            <h3 id="avg-severity">尚無紀錄</h3>
+                            <span class="trend-good" id="avg-severity-trend">尚無數據</span>
+                        </div>
+                        <div class="stat-card">
+                            <span>最新紀錄時間與體溫</span>
+                            <h3 id="latest-time" style="font-size: 15px; margin-top: 8px;">尚無紀錄</h3>
+                            <span class="tip" id="main-symptom-tip">即時同步數據中</span>
+                        </div>
+                    </div>
+
+                    <div class="charts-container">
+                        <div class="chart-box">
+                            <h3>體溫歷史變化趨勢圖 (°C)</h3>
+                            <div class="canvas-wrapper">
+                                <canvas id="tempChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <h3>症狀嚴重度評分歷史 (1-10)</h3>
+                            <div class="canvas-wrapper">
+                                <canvas id="severityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 紀錄管理與智慧附近醫院查詢 (結合定位與科別篩選) -->
+            <section id="history-clinic-tab" class="tab-content">
+                <div class="scrollable-content">
+                    <div class="grid-2col">
+                        <div class="card">
+                            <div class="history-header">
+                                <h2>歷史查詢與分析紀錄</h2>
+                                <button id="clear-history-btn" class="text-btn">清空歷史</button>
+                            </div>
+                            <div id="history-list" class="history-list">
+                                <div class="empty-history">目前尚無歷史查詢紀錄</div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="clinic-header-area">
+                                <h2>附近醫療院所智慧導航</h2>
+                                <button id="get-location-btn" class="secondary-btn">📍 取得我的位置與智慧推薦</button>
+                            </div>
+                            <p class="location-status" id="location-status">狀態：顯示預設推薦醫院，點擊上方按鈕可透過 GPS 定位搜尋附近診所。</p>
+                            <div id="clinic-list" class="clinic-list">
+                                <!-- 動態產生的醫院列表 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 美化後的緊急警示測試 -->
+            <section id="emergency-tab" class="tab-content">
+                <div class="scrollable-content">
+                    <div class="card emergency-redesigned-card">
+                        <div class="emergency-badge">🚨 急重症即時監測保護中</div>
+                        <h2>急重症緊急醫療警示系統</h2>
+                        <p class="emergency-subtitle">當系統偵測到胸痛、呼吸困難、急性偏癱或重度失血等高風險急症關鍵字時，將立即中斷衛教流程並啟動緊急救援提醒。</p>
+                        
+                        <div class="emergency-steps-grid">
+                            <div class="step-box">
+                                <div class="step-num">1</div>
+                                <h4>辨識高危症狀</h4>
+                                <p>包含持續胸痛、呼吸急促、冒冷汗或劇烈腹痛等急重症表現。</p>
+                            </div>
+                            <div class="step-box">
+                                <div class="step-num">2</div>
+                                <h4>中斷一般衛教</h4>
+                                <p>系統將暫停常規諮詢，主動彈出紅色全螢幕警報防護視窗。</p>
+                            </div>
+                            <div class="step-box">
+                                <div class="step-num">3</div>
+                                <h4>引導緊急就醫</h4>
+                                <p>即時提供 119 急救撥號引導與鄰近醫院急診室位置導航。</p>
+                            </div>
+                        </div>
+
+                        <div class="emergency-action-area">
+                            <button id="test-emergency-btn" class="danger-btn-lg">🚨 模擬觸發急重症警示彈窗</button>
+                            <span class="action-tip">點擊測試系統高風險自動警報與聯絡機制</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 緊急警示彈窗 Modal -->
+    <div id="emergency-modal" class="modal hidden">
+        <div class="modal-content danger-modal-content">
+            <h2>⚠️ 急重症警示：請立即尋求緊急醫療協助</h2>
+            <p>系統偵測到高風險急重症症狀！為保障您的生命安全，請立即撥打 119 或由他人陪同前往最近的醫院急診室！</p>
+            <div class="modal-btn-group">
+                <a href="tel:119" class="primary-btn" style="text-decoration: none; display: inline-block; margin-bottom: 8px; background: #c53030;">📞 立即撥打 119 急救電話</a>
+                <button id="close-modal-btn" class="secondary-btn" style="width: 100%;">我知道了，關閉提示</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
